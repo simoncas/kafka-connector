@@ -68,15 +68,16 @@ func main() {
 
 	brokers := []string{config.broker + ":9092"}
 	for {
-
-		client, err = sarama.NewClient(brokers, nil)
-		if client != nil && err == nil {
-			break
+		if len(topicMap.Topics()) > 0 {
+			client, err = sarama.NewClient(brokers, nil)
+			if client != nil && err == nil {
+				break
+			}
+			if client != nil {
+				client.Close()
+			}
+			fmt.Println("Wait for brokers ("+config.broker+") to come up.. ", brokers)
 		}
-		if client != nil {
-			client.Close()
-		}
-		fmt.Println("Wait for brokers ("+config.broker+") to come up.. ", brokers)
 
 		time.Sleep(1 * time.Second)
 	}
