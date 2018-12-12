@@ -18,7 +18,6 @@ import (
 	auth "github.com/openfaas/faas-provider/auth"
 )
 
-// Sarama currently cannot support latest kafka protocol version V0_10_2_0
 var saramaKafkaProtocolVersion = sarama.V0_10_2_0
 
 type connectorConfig struct {
