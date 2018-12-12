@@ -2,20 +2,28 @@
 
 
 [[projects]]
-  digest = "1:2447436343298370bbed7d640e19e7fcaa67cfd9031b99228c4651c595312863"
+  digest = "1:c99bd4548f502371b98c77534239a514c9a1e715d468af3c108db06186aa692a"
+  name = "github.com/DataDog/zstd"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "aebefd9fcb99f22cd691ef778a12ed68f0e6a1ab"
+  version = "v1.3.4"
+
+[[projects]]
+  digest = "1:a59a467c541a1bf8b06e4fad6113028c959be6573b78ceca9f8020cd0d2127fc"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = "UT"
-  revision = "240fd146ce68bcafb034cc5dc977229ffbafa8ea"
-  version = "v1.14.0"
+  revision = "879f631812a30a580659e8035e7cda9994bb99ac"
+  version = "v1.20.0"
 
 [[projects]]
-  digest = "1:e6598844d9d4fc18a223668129d94111f0f9190d3a13e869232bf4f3016e68a6"
+  digest = "1:526d64d0a3ac6c24875724a9355895be56a21f89a5d3ab5ba88d91244269a7d8"
   name = "github.com/bsm/sarama-cluster"
   packages = ["."]
   pruneopts = "UT"
-  revision = "abf039439f66c1ce78017f560b490612552f6472"
-  version = "v2.1.10"
+  revision = "c618e605e15c0d7535f6c96ff8efbb0dba4fd66c"
+  version = "v2.1.15"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
