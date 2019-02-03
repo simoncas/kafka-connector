@@ -3,7 +3,6 @@ RUN mkdir -p /go/src/github.com/openfaas-incubator/kafka-connector
 WORKDIR /go/src/github.com/openfaas-incubator/kafka-connector
 
 COPY vendor     vendor
-COPY types      types
 COPY main.go    .
 
 # Run a gofmt and exclude all vendored code.

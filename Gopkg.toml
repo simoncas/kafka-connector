@@ -28,6 +28,10 @@
   name = "github.com/Shopify/sarama"
   version = "1.20.0"
 
+[[constraint]]
+  name = "github.com/openfaas-incubator/connector-sdk"
+  version = "0.3.2"
+
 [prune]
    go-tests = true
    unused-packages = true

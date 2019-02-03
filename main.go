@@ -13,61 +13,40 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
-	"github.com/openfaas-incubator/kafka-connector/types"
-	auth "github.com/openfaas/faas-provider/auth"
+	cluster "github.com/bsm/sarama-cluster"
+	"github.com/openfaas-incubator/connector-sdk/types"
 )
 
 var saramaKafkaProtocolVersion = sarama.V0_10_2_0
 
 type connectorConfig struct {
-	gatewayURL      string
-	upstreamTimeout time.Duration
-	topics          []string
-	printResponse   bool
-	rebuildInterval time.Duration
-	broker          string
+	*types.ControllerConfig
+	Topics []string
+	Broker string
 }
 
 func main() {
+
+	credentials := types.GetCredentials()
+	config := buildConnectorConfig()
+
+	controller := types.NewController(credentials, config.ControllerConfig)
+
+	controller.BeginMapBuilder()
+
+	brokers := []string{config.Broker + ":9092"}
+	waitForBrokers(brokers, config, controller)
+
+	makeConsumer(brokers, config, controller)
+}
+
+func waitForBrokers(brokers []string, config connectorConfig, controller *types.Controller) {
+
 	var client sarama.Client
 	var err error
 
-	var credentials *auth.BasicAuthCredentials
-
-	if val, ok := os.LookupEnv("basic_auth"); ok && len(val) > 0 {
-		if val == "true" || val == "1" {
-
-			reader := auth.ReadBasicAuthFromDisk{}
-
-			if val, ok := os.LookupEnv("secret_mount_path"); ok && len(val) > 0 {
-				reader.SecretMountPath = os.Getenv("secret_mount_path")
-			}
-
-			res, err := reader.Read()
-			if err != nil {
-				panic(err)
-			}
-			credentials = res
-		}
-	}
-
-	config := buildConnectorConfig()
-
-	topicMap := types.NewTopicMap()
-
-	lookupBuilder := types.FunctionLookupBuilder{
-		GatewayURL:  config.gatewayURL,
-		Client:      types.MakeClient(config.upstreamTimeout),
-		Credentials: credentials,
-	}
-
-	ticker := time.NewTicker(config.rebuildInterval)
-	go synchronizeLookups(ticker, &lookupBuilder, &topicMap)
-
-	brokers := []string{config.broker + ":9092"}
 	for {
-		if len(topicMap.Topics()) > 0 {
+		if len(controller.Topics()) > 0 {
 			client, err = sarama.NewClient(brokers, nil)
 			if client != nil && err == nil {
 				break
@@ -75,32 +54,14 @@ func main() {
 			if client != nil {
 				client.Close()
 			}
-			fmt.Println("Wait for brokers ("+config.broker+") to come up.. ", brokers)
+			fmt.Println("Wait for brokers ("+config.Broker+") to come up.. ", brokers)
 		}
 
 		time.Sleep(1 * time.Second)
 	}
-
-	makeConsumer(client, brokers, config, &topicMap)
 }
 
-func synchronizeLookups(ticker *time.Ticker,
-	lookupBuilder *types.FunctionLookupBuilder,
-	topicMap *types.TopicMap) {
-
-	for {
-		<-ticker.C
-		lookups, err := lookupBuilder.Build()
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		log.Println("Syncing topic map")
-		topicMap.Sync(&lookups)
-	}
-}
-
-func makeConsumer(client sarama.Client, brokers []string, config connectorConfig, topicMap *types.TopicMap) {
+func makeConsumer(brokers []string, config connectorConfig, controller *types.Controller) {
 	//setup consumer
 	cConfig := cluster.NewConfig()
 	cConfig.Version = saramaKafkaProtocolVersion
@@ -112,8 +73,8 @@ func makeConsumer(client sarama.Client, brokers []string, config connectorConfig
 
 	group := "faas-kafka-queue-workers"
 
-	topics := config.topics
-	log.Printf("Binding to topics: %v", config.topics)
+	topics := config.Topics
+	log.Printf("Binding to topics: %v", config.Topics)
 
 	consumer, err := cluster.NewConsumer(brokers, group, topics, cConfig)
 	if err != nil {
@@ -121,8 +82,6 @@ func makeConsumer(client sarama.Client, brokers []string, config connectorConfig
 	}
 
 	defer consumer.Close()
-
-	mcb := makeMessageHandler(topicMap, config)
 
 	num := 0
 
@@ -137,7 +96,7 @@ func makeConsumer(client sarama.Client, brokers []string, config connectorConfig
 					msg.Partition,
 					string(msg.Value))
 
-				mcb(msg)
+				controller.Invoke(msg.Topic, &msg.Value)
 
 				consumer.MarkOffset(msg, "") // mark message as processed
 			}
@@ -151,20 +110,6 @@ func makeConsumer(client sarama.Client, brokers []string, config connectorConfig
 
 		}
 	}
-}
-
-func makeMessageHandler(topicMap *types.TopicMap, config connectorConfig) func(msg *sarama.ConsumerMessage) {
-
-	invoker := types.Invoker{
-		PrintResponse: config.printResponse,
-		Client:        types.MakeClient(config.upstreamTimeout),
-		GatewayURL:    config.gatewayURL,
-	}
-
-	mcb := func(msg *sarama.ConsumerMessage) {
-		invoker.Invoke(topicMap, msg.Topic, &msg.Value)
-	}
-	return mcb
 }
 
 func buildConnectorConfig() connectorConfig {
@@ -213,12 +158,20 @@ func buildConnectorConfig() connectorConfig {
 		printResponse = (val == "1" || val == "true")
 	}
 
+	printResponseBody := false
+	if val, exists := os.LookupEnv("print_response_body"); exists {
+		printResponseBody = (val == "1" || val == "true")
+	}
+
 	return connectorConfig{
-		gatewayURL:      gatewayURL,
-		upstreamTimeout: upstreamTimeout,
-		topics:          topics,
-		rebuildInterval: rebuildInterval,
-		broker:          broker,
-		printResponse:   printResponse,
+		ControllerConfig: &types.ControllerConfig{
+			UpstreamTimeout:   upstreamTimeout,
+			GatewayURL:        gatewayURL,
+			PrintResponse:     printResponse,
+			PrintResponseBody: printResponseBody,
+			RebuildInterval:   rebuildInterval,
+		},
+		Topics: topics,
+		Broker: broker,
 	}
 }

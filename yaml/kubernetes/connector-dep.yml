@@ -25,6 +25,8 @@ spec:
             value: "faas-request,"
           - name: print_response
             value: "true"
+          - name: print_response_body
+            value: "true"
           - name: basic_auth
             value: "true"
           - name: secret_mount_path

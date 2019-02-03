@@ -187,5 +187,6 @@ This configuration can be set in the YAML files for Kubernetes or Swarm.
 | `topics`                | Topics to which the connector will bind                     |
 | `gateway_url`           | The URL for the API gateway i.e. http://gateway:8080 or http://gateway.openfaas:8080 for Kubernetes       |
 | `broker_host`           | Default is `kafka`                                          |
-| `print_response`        | Default is `true` - this will output the response of calling a function in the logs |
+| `print_response`        | Default is `true` - this will output information about the response of calling a function in the logs, including the HTTP status, topic that triggered invocation, the function name, and the length of the response body in bytes |
+| `print_response_body`   | Default is `true` - this will print the body of the response of calling a function to stdout |
 

@@ -28,6 +28,7 @@ services:
       gateway_url: http://gateway:8080
       topics: "faas-request,"
       print_response: "true"
+      print_response_body: "true"
       basic_auth: "true"
       secret_mount_path: "/run/secrets/"
     secrets:
