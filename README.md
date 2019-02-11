@@ -19,6 +19,13 @@ When the connector hears a message on an advertised topic it will look that up i
 
 The cache or list of functions <-> topics is refreshed on a periodic basis.
 
+## Building
+
+```
+export TAG=0.4.0
+make build push
+```
+
 ## Try it out
 
 ### Deploy Swarm
