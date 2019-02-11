@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/Shopify/sarama"
 )
@@ -12,12 +14,22 @@ var (
 )
 
 func main() {
-	var messages int
+
+	var (
+		messages int
+		pause    time.Duration
+		broker   string
+		topic    string
+	)
+
 	flag.IntVar(&messages, "messages", 1, "specify the number of messages")
+	flag.StringVar(&broker, "broker", "kafka:9092", "broker address and port")
+	flag.StringVar(&topic, "topic", "faas-request", "topic to produce messages on")
+	flag.DurationVar(&pause, "pause", time.Millisecond*100, "pause in Golang duration format")
+
 	flag.Parse()
 
-	brokerList := []string{"kafka:9092"}
-	topic := "faas-request"
+	brokerList := []string{broker}
 
 	config := sarama.NewConfig()
 	config.Version = SARAMA_KAFKA_PROTO_VER
@@ -41,12 +53,15 @@ func main() {
 		Value: sarama.StringEncoder("Test the function."),
 	}
 
-	fmt.Printf("Sending %d messages.\n", messages)
+	log.Printf("Sending %d messages.\n", messages)
 	for i := 0; i < messages; i++ {
 		partition, offset, err := producer.SendMessage(msg)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Msg: topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+
+		log.Printf("Msg: topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+
+		time.Sleep(pause)
 	}
 }
