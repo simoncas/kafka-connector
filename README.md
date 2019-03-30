@@ -28,7 +28,92 @@ make build push
 
 ## Try it out
 
-### Deploy Swarm
+### Deploy on Kubernetes
+
+The following instructions show how to run `kafka-connector` on Kubernetes.
+
+Deploy a function with a `topic` annotation:
+
+```bash
+$ faas store deploy figlet --annotation topic="faas-request" --gateway <faas-netes-gateway-url>
+```
+
+Deploy Kafka:
+
+You can run the zookeeper, kafka-broker and kafka-connector pods with:
+
+```bash
+kubectl apply -f ./yaml/kubernetes/
+```
+
+If you already have Kafka then update `./yaml/kubernetes/connector-dep.yml` with your Kafka broker address and then deploy only that file:
+
+```bash
+kubectl apply -f ./yaml/kubernetes/connector-dep.yml
+```
+
+Alternatively you can use the [kafka-connector helm chart](https://github.com/openfaas/faas-netes/tree/master/chart/kafka-connector)
+
+Then use the broker to send messages to the topic:
+
+```bash
+BROKER=$(kubectl get pods -n openfaas -l component=kafka-broker -o name|cut -d'/' -f2)
+kubectl exec -n openfaas -t -i $BROKER -- /opt/kafka_2.12-0.11.0.1/bin/kafka-console-producer.sh --broker-list kafka:9092 --topic faas-request
+
+hello world
+```
+Once you have connected, each new line will be a message published.
+
+If you have an error
+```
+error: unable to upgrade connection: container not found ("kafka")
+```
+just wait and retry.
+
+You can verify the proper path of the publisher script by getting the shell of the running broker:
+```
+$ kubectl exec -n openfaas -t -i $BROKER -- sh 
+/ # find | grep producer
+
+./opt/kafka_2.12-0.11.0.1/config/producer.properties
+./opt/kafka_2.12-0.11.0.1/bin/kafka-verifiable-producer.sh
+./opt/kafka_2.12-0.11.0.1/bin/kafka-producer-perf-test.sh
+./opt/kafka_2.12-0.11.0.1/bin/kafka-console-producer.sh
+```
+
+With the `$BROKER` variable still set, view the list of messages on a given topic:
+
+```
+$ kubectl exec -n openfaas -t -i $BROKER -- /opt/kafka_2.12-0.11.0.1/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic faas-request --from-beginning
+```
+
+Now check the connector logs to see the figlet function was invoked:
+
+```bash
+CONNECTOR=$(kubectl get pods -n openfaas -o name|grep kafka-connector|cut -d'/' -f2)
+kubectl logs -n openfaas -f --tail 100 $CONNECTOR
+
+2018/08/08 16:54:35 Binding to topics: [faas-request]
+2018/08/08 16:54:38 Syncing topic map
+Rebalanced: &{Type:rebalance start Claimed:map[] Released:map[] Current:map[]}
+Rebalanced: &{Type:rebalance OK Claimed:map[faas-request:[0]] Released:map[] Current:map[faas-request:[0]]}
+
+2018/08/08 16:54:41 Syncing topic map
+2018/08/08 16:54:44 Syncing topic map
+2018/08/08 16:54:47 Syncing topic map
+
+[#53753] Received on [faas-request,0]: 'hello world.'
+2018/08/08 16:57:41 Invoke function: figlet
+2018/08/08 16:57:42 Response [200] from figlet  
+ _          _ _                            _     _ 
+| |__   ___| | | ___   __      _____  _ __| | __| |
+| '_ \ / _ \ | |/ _ \  \ \ /\ / / _ \| '__| |/ _` |
+| | | |  __/ | | (_) |  \ V  V / (_) | |  | | (_| |
+|_| |_|\___|_|_|\___/    \_/\_/ \___/|_|  |_|\__,_|
+                                                   
+```
+
+### Deploy on Swarm
 
 Deploy the stack which contains Kafka and the connector:
 
@@ -105,89 +190,6 @@ Rebalanced: &{Type:rebalance OK Claimed:map[faas-request:[0]] Released:map[] Cur
 
 
 > Note: If the broker has a different name from `kafka` you can pass the `broker_host` environmental variable. This exclude the port.
-
-### Deploy on Kubernetes
-
-The following instructions show how to run `kafka-connector` on Kubernetes.
-
-Deploy a function with a `topic` annotation:
-
-```bash
-$ faas store deploy figlet --annotation topic="faas-request" --gateway <faas-netes-gateway-url>
-```
-
-Deploy Kafka:
-
-You can run the zookeeper, kafka-broker and kafka-connector pods with:
-
-```bash
-kubectl apply -f ./yaml/kubernetes/
-```
-
-If you already have Kafka then update `./yaml/kubernetes/connector-dep.yml` with your Kafka broker address and then deploy only that file:
-
-```bash
-kubectl apply -f ./yaml/kubernetes/connector-dep.yml
-```
-
-Then use the broker to send messages to the topic:
-
-```bash
-BROKER=$(kubectl get pods -n openfaas -l component=kafka-broker -o name|cut -d'/' -f2)
-kubectl exec -n openfaas -t -i $BROKER -- /opt/kafka_2.12-0.11.0.1/bin/kafka-console-producer.sh --broker-list kafka:9092 --topic faas-request
-
-hello world
-```
-Once you have connected, each new line will be a message published.
-
-If you have an error
-```
-error: unable to upgrade connection: container not found ("kafka")
-```
-just wait and retry.
-
-You can verify the proper path of the publisher script by getting the shell of the running broker:
-```
-$ kubectl exec -n openfaas -t -i $BROKER -- sh 
-/ # find | grep producer
-
-./opt/kafka_2.12-0.11.0.1/config/producer.properties
-./opt/kafka_2.12-0.11.0.1/bin/kafka-verifiable-producer.sh
-./opt/kafka_2.12-0.11.0.1/bin/kafka-producer-perf-test.sh
-./opt/kafka_2.12-0.11.0.1/bin/kafka-console-producer.sh
-```
-
-With the `$BROKER` variable still set, view the list of messages on a given topic:
-
-```
-$ kubectl exec -n openfaas -t -i $BROKER -- /opt/kafka_2.12-0.11.0.1/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic faas-request --from-beginning
-```
-
-Now check the connector logs to see the figlet function was invoked:
-
-```bash
-CONNECTOR=$(kubectl get pods -n openfaas -o name|grep kafka-connector|cut -d'/' -f2)
-kubectl logs -n openfaas -f --tail 100 $CONNECTOR
-
-2018/08/08 16:54:35 Binding to topics: [faas-request]
-2018/08/08 16:54:38 Syncing topic map
-Rebalanced: &{Type:rebalance start Claimed:map[] Released:map[] Current:map[]}
-Rebalanced: &{Type:rebalance OK Claimed:map[faas-request:[0]] Released:map[] Current:map[faas-request:[0]]}
-
-2018/08/08 16:54:41 Syncing topic map
-2018/08/08 16:54:44 Syncing topic map
-2018/08/08 16:54:47 Syncing topic map
-
-[#53753] Received on [faas-request,0]: 'hello world.'
-2018/08/08 16:57:41 Invoke function: figlet
-2018/08/08 16:57:42 Response [200] from figlet  
- _          _ _                            _     _ 
-| |__   ___| | | ___   __      _____  _ __| | __| |
-| '_ \ / _ \ | |/ _ \  \ \ /\ / / _ \| '__| |/ _` |
-| | | |  __/ | | (_) |  \ V  V / (_) | |  | | (_| |
-|_| |_|\___|_|_|\___/    \_/\_/ \___/|_|  |_|\__,_|
-                                                   
-```
 
 ## Configuration
 
