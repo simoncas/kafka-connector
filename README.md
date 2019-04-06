@@ -22,7 +22,7 @@ The cache or list of functions <-> topics is refreshed on a periodic basis.
 ## Building
 
 ```
-export TAG=0.4.0
+export TAG=0.3.3
 make build push
 ```
 
