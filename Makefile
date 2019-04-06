@@ -1,5 +1,5 @@
-TAG?=latest
-NAMESPACE?=functions
+TAG?=latest-dev
+NAMESPACE?=openfaas
 .PHONY: build
 
 build:

@@ -1,4 +1,4 @@
-FROM golang:1.9.2
+FROM golang:1.10
 RUN mkdir -p /go/src/github.com/openfaas-incubator/kafka-connector
 WORKDIR /go/src/github.com/openfaas-incubator/kafka-connector
 
